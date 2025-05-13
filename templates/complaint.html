@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>File a Complaint</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/complaint.css') }}">
+</head>
+<body>
+  <header>
+    <h1>Barangay Poblacion Portal</h1>
+    <nav>
+      <ul>
+        <li><button onclick="location.href='{{ url_for('menu') }}'">Home</button></li>
+        <li><button onclick="location.href='{{ url_for('documents') }}'">Request Documents</button></li>
+        <li><button onclick="location.href='{{ url_for('complaint') }}'">File a Complaint</button></li>
+        <li><button onclick="location.href='{{ url_for('contact') }}'">Contact Us</button></li>
+        <li><button onclick="location.href='{{ url_for('login') }}'">Logout</button></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <div class="container">
+      <h1>File a Complaint</h1>
+      <form id="complaintForm">
+        <h2>Complainant's Information</h2>
+        <label for="complainantName">Name:</label>
+        <input type="text" id="complainantName" required>
+
+        <label for="address">Address:</label>
+        <input type="text" id="address" required>
+
+        <label for="contactNumber">Contact Number:</label>
+        <input type="text" id="contactNumber" required>
+
+        <h2>Complaint Details</h2>
+        <label for="complaintType">Complaint Type:</label>
+        <select id="complaintType" required>
+          <option value="Noise Disturbance">Noise Disturbance</option>
+          <option value="Waste Management Concerns">Waste Management Concerns</option>
+          <option value="Illegal Activities">Illegal Activities</option>
+          <option value="Other">Other</option>
+        </select>
+
+        <label for="incidentDate">Incident Date:</label>
+        <input type="date" id="incidentDate" required>
+
+        <label for="incidentTime">Incident Time:</label>
+        <input type="time" id="incidentTime" required>
+
+        <label for="incidentLocation">Incident Location:</label>
+        <input type="text" id="incidentLocation" required>
+
+        <label for="description">Detailed Description:</label>
+        <textarea id="description" rows="4" required></textarea>
+
+        <h2>Agreement to Barangay Mediation</h2>
+        <label>
+          <input type="checkbox" id="agreement" required>
+          I agree to barangay intervention and mediation.
+        </label>
+
+        <button type="submit" id="submitButton">Submit Complaint</button>
+      </form>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Address</th>
+            <th>Contact Number</th>
+            <th>Complaint Type</th>
+            <th>Incident Date</th>
+            <th>Incident Time</th>
+            <th>Incident Location</th>
+            <th>Description</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="complaintTableBody">
+          {% for c in complaints %}
+          <tr data-id="{{ c.id }}">
+            <td>{{ c.full_name }}</td>
+            <td>{{ c.address }}</td>
+            <td>{{ c.contact_number }}</td>
+            <td>{{ c.complaint_type }}</td>
+            <td>{{ c.incident_date }}</td>
+            <td>{{ c.incident_time }}</td>
+            <td>{{ c.incident_location }}</td>
+            <td>{{ c.description }}</td>
+            <td class="actions">
+              <button onclick="editComplaint(this)">Edit</button>
+              <button onclick="deleteComplaint(this)">Delete</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    const form = document.getElementById('complaintForm');
+    const tbody = document.getElementById('complaintTableBody');
+    let editingRow = null;
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const payload = {
+        name: document.getElementById('complainantName').value.trim(),
+        address: document.getElementById('address').value.trim(),
+        contactNumber: document.getElementById('contactNumber').value.trim(),
+        complaintType: document.getElementById('complaintType').value,
+        incidentDate: document.getElementById('incidentDate').value,
+        incidentTime: document.getElementById('incidentTime').value,
+        incidentLocation: document.getElementById('incidentLocation').value.trim(),
+        description: document.getElementById('description').value.trim(),
+        agreement: document.getElementById('agreement').checked
+      };
+
+      if (editingRow) {
+        // UPDATE
+        const id = editingRow.dataset.id;
+        const res = await fetch(`/api/complaints/${id}`, {
+          method: 'PUT',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          editingRow.children[0].innerText = data.full_name;
+          editingRow.children[1].innerText = data.address;
+          editingRow.children[2].innerText = data.contact_number;
+          editingRow.children[3].innerText = data.complaint_type;
+          editingRow.children[4].innerText = data.incident_date;
+          editingRow.children[5].innerText = data.incident_time;
+          editingRow.children[6].innerText = data.incident_location;
+          editingRow.children[7].innerText = data.description;
+        }
+      } else {
+        // CREATE
+        const res = await fetch('/api/complaints', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const tr = document.createElement('tr');
+          tr.dataset.id = data.id;
+          tr.innerHTML = `
+            <td>${data.full_name}</td>
+            <td>${data.address}</td>
+            <td>${data.contact_number}</td>
+            <td>${data.complaint_type}</td>
+            <td>${data.incident_date}</td>
+            <td>${data.incident_time}</td>
+            <td>${data.incident_location}</td>
+            <td>${data.description}</td>
+            <td class="actions">
+              <button onclick="editComplaint(this)">Edit</button>
+              <button onclick="deleteComplaint(this)">Delete</button>
+            </td>`;
+          tbody.prepend(tr);
+        }
+      }
+
+      form.reset();
+      editingRow = null;
+      document.getElementById('submitButton').innerText = 'Submit Complaint';
+    });
+
+    function editComplaint(btn) {
+      editingRow = btn.closest('tr');
+      const cells = editingRow.children;
+      document.getElementById('complainantName').value = cells[0].innerText;
+      document.getElementById('address').value = cells[1].innerText;
+      document.getElementById('contactNumber').value = cells[2].innerText;
+      document.getElementById('complaintType').value = cells[3].innerText;
+      document.getElementById('incidentDate').value = cells[4].innerText;
+      document.getElementById('incidentTime').value = cells[5].innerText;
+      document.getElementById('incidentLocation').value = cells[6].innerText;
+      document.getElementById('description').value = cells[7].innerText;
+      document.getElementById('submitButton').innerText = 'Update Complaint';
+    }
+
+    async function deleteComplaint(btn) {
+      const row = btn.closest('tr');
+      const id = row.dataset.id;
+      const res = await fetch(`/api/complaints/${id}`, { method:'DELETE' });
+      if (res.ok) row.remove();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home: Barangay Poblacion</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bmenu.css') }}">
+    <script defer src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        function goTodocuments() {
+            window.location.href = "{{ url_for('documents') }}";
+        }
+        function goTocomplaint() {
+            window.location.href = "{{ url_for('complaint') }}";
+        }
+        function goTocontact() {
+            window.location.href = "{{ url_for('contact') }}";
+        }
+        function goTologin() {
+            window.location.href = "{{ url_for('login') }}";
+        }
+    </script>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="logo">Barangay Poblacion Portal</div>
+        <button class="menu-toggle">&#9776;</button>
+        <div class="nav-buttons">
+            <button class="btn" onclick="goTodocuments()">Request Documents</button>
+            <button class="btn" onclick="goTocomplaint()">File a Complaint</button>
+            <button class="btn" onclick="goTocontact()">Contact Us</button>
+            <button class="btn" onclick="goTologin()">Logout</button>
+        </div>
+    </nav>
+
+    <main>
+        <!-- Community News Section -->
+        <section class="community-news">
+            <h1>Community News</h1>
+            <div class="news-feed">
+                <div class="news-item">
+                    <h1>Earthquake Drill</h1>
+                    <img src="{{ url_for('static', filename='images/post1.jpg') }}" alt="post1">
+                    <p>Sa March 13, 2025, alas-tres ng hapon, makiisa sa 1st Quarter Nationwide Simultaneous Earthquake Drill at magDuck, Cover and Hold. Tandaan, Bida ang Handa!</p>
+                </div>
+                <div class="news-item">
+                    <h1>Basketball: One Day League</h1>
+                    <img src="{{ url_for('static', filename='images/post2.jpg') }}" alt="post2">
+                    <p>🏀 Get Ready for the SK Poblacion One Day League Basketball for 19 years old and above! 🏀 ...</p>
+                </div>
+                <div class="news-item">
+                    <h1>Digital Art Contest</h1>
+                    <img src="{{ url_for('static', filename='images/post3.jpg') }}" alt="post3">
+                    <p>🎨 Tatlong Kamangha-manghang Likha mula sa Kabataan ng Barangay Poblacion, Siguradong Panalo! 🎨 ...</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+</body>
+</html>
