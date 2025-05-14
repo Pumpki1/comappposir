@@ -131,22 +131,31 @@ def contact():
 @app.route('/api/requests', methods=['POST'])
 def add_request():
     data = request.json
-    record = {
-        "name":           data['name'],
-        "address":        data['address'],
-        "birthdate":      data['birthdate'],
-        "start_living":   data['startLiving'],
-        "purpose":        data['purpose'],
-        "age":            data['age'],
-        "guardian_name":  data.get('guardianName'),
-        "document_type":  data['documentType'],
-        "status":         "Pending",
-        "requested_at":   datetime.utcnow().isoformat()
-    }
-    res = supabase.table('document_requests').insert(record).execute()
-    if res.error:
-        return jsonify({"error": res.error.message}), 400
-    return jsonify(res.data[0]), 201
+    try:
+        record = {
+            "name":           data['name'],
+            "address":        data['address'],
+            "birthdate":      data['birthdate'],
+            "start_living":   data['startLiving'],
+            "purpose":        data['purpose'],
+            "age":            data['age'],
+            "guardian_name":  data.get('guardianName', ''),
+            "document_type":  data['documentType'],
+            "status":         "Pending",
+            "requested_at":   datetime.utcnow().isoformat()
+        }
+        res = supabase.table('document_requests').insert(record).execute()
+
+        if res.error:
+            return jsonify({"message": res.error.message}), 400
+
+        return jsonify(res.data[0]), 201
+    except Exception as e:
+        print("Server error:", str(e))  # this helps debug in terminal
+        return jsonify({"message": "Internal server error"}), 500
+
+
+
 
 @app.route('/api/requests', methods=['GET'])
 def list_requests():
@@ -157,6 +166,8 @@ def list_requests():
     if res.error:
         return jsonify({"error": res.error.message}), 500
     return jsonify(res.data or []), 200
+
+
 
 @app.route('/api/requests/<int:req_id>', methods=['PUT'])
 def update_request(req_id):

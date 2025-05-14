@@ -59,6 +59,8 @@
         </select>
 
         <button type="submit" id="submitButton">Add Request</button>
+
+        <div id="notification" style="display:none; padding:10px; margin-top:10px; border-radius:5px;"></div>
       </form>
 
       <!-- Report of last submitted request -->
@@ -120,59 +122,78 @@
   document.addEventListener('DOMContentLoaded', fetchRequests);
 
   // Form submission handler
-  form.addEventListener('submit', async event => {
-    event.preventDefault();
-    const payload = {
-      name:          document.getElementById('name').value.trim(),
-      address:       document.getElementById('address').value.trim(),
-      birthdate:     document.getElementById('birthdate').value,
-      startLiving:   document.getElementById('startLiving').value,
-      purpose:       document.getElementById('purpose').value.trim(),
-      age:           parseInt(document.getElementById('age').value, 10),
-      guardianName:  document.getElementById('guardianName').value.trim(),
-      documentType:  document.getElementById('documentType').value
-    };
+form.addEventListener('submit', async event => {
+  event.preventDefault();
 
-    let res;
-    if (requestIdInput.value) {
-      res = await fetch(`/api/requests/${requestIdInput.value}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-    } else {
-      res = await fetch('/api/requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-    }
+  const payload = {
+    name:          document.getElementById('name').value.trim(),
+    address:       document.getElementById('address').value.trim(),
+    birthdate:     document.getElementById('birthdate').value,
+    startLiving:   document.getElementById('startLiving').value,
+    purpose:       document.getElementById('purpose').value.trim(),
+    age:           parseInt(document.getElementById('age').value, 10),
+    guardianName:  document.getElementById('guardianName').value.trim(),
+    documentType:  document.getElementById('documentType').value
+  };
 
-    if (res.ok) {
-      const data = await res.json();
-      showReport(data);
+  const isEdit = !!requestIdInput.value;
+  const url = isEdit ? `/api/requests/${requestIdInput.value}` : '/api/requests';
+  const method = isEdit ? 'PUT' : 'POST';
 
-      // ↓↓↓— These two lines ensure a blocking alert, then a form reset
-      alert('✅ Request submitted successfully!');
-      form.reset();
+  try {
+const res = await fetch(url, {
+  method,
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(payload)
+});
 
-      // Reset internal state
-      requestIdInput.value = '';
-      submitButton.textContent = 'Add Request'; 
-      guardianField.style.display = 'none';
+if (!res.ok) {
+  const contentType = res.headers.get('content-type');
+  let errorMessage = `Error ${res.status}`;
+  if (contentType && contentType.includes('application/json')) {
+    const errData = await res.json();
+    errorMessage = errData.message || errorMessage;
+  } else {
+    const text = await res.text();
+    console.error('Non-JSON error:', text);
+  }
+  throw new Error(errorMessage);
+}
 
-      // Reload the table
-      fetchRequests();
-    } else {
-      const err = await res.json();
-      alert(`❌ Error: ${err.error || err.message || res.statusText}`);
-    }
-  });
+const data = await res.json();
+
+    showReport(data);
+    showNotification(`✅ Request ${isEdit ? 'updated' : 'submitted'} successfully!`, true);
+
+    // Reset form and UI
+    form.reset();
+    requestIdInput.value = '';
+    submitButton.textContent = 'Add Request';
+    guardianField.style.display = 'none';
+
+    if (!isEdit) addRow(data);  // Only add new row if not editing
+    else fetchRequests();       // Or reload to reflect updates
+
+  } catch (err) {
+    showNotification(`❌ ${err.message}`, false);
+  }
+});
 
   // Toggle guardian field
   document.getElementById('age').addEventListener('input', function() {
     guardianField.style.display = parseInt(this.value, 10) < 18 ? 'block' : 'none';
   });
+
+  function showNotification(message, success = true) {
+  const notif = document.getElementById('notification');
+  notif.textContent = message;
+  notif.style.display = 'block';
+  notif.style.backgroundColor = success ? '#d4edda' : '#f8d7da';
+  notif.style.color = success ? '#155724' : '#721c24';
+  notif.style.border = success ? '1px solid #c3e6cb' : '1px solid #f5c6cb';
+
+  setTimeout(() => notif.style.display = 'none', 3000);
+}
 
   // Fetch and render all requests
   async function fetchRequests() {
