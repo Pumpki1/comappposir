@@ -1,3 +1,5 @@
+/* static/css/documents.css */
+
 body {
     font-family: 'Poppins', sans-serif;
     margin: 0;
@@ -127,4 +129,18 @@ th {
     background: #f44336;
     color: #fff;
     border: none;
+}
+
+/* status‑color classes */
+.status-pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+.status-approved {
+  background-color: #d4edda;
+  color: #155724;
+}
+.status-rejected {
+  background-color: #f8d7da;
+  color: #721c24;
 }

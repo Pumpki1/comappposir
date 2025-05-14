@@ -7,6 +7,37 @@
     <title>Barangay Poblacion</title>
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/alogin.css') }}">
+    <script>
+        function verifyAdmin() {
+            const adminCode = prompt("Enter the admin verification code:");
+            
+            // If user cancels the prompt or submits empty
+            if (adminCode === null || adminCode.trim() === "") {
+                return;
+            }
+            
+            // Send admin code to backend for verification
+            fetch('{{ url_for("admin_verify") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ admin_code: adminCode })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = data.redirect;
+                } else {
+                    alert("Invalid verification code. Access denied.");
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert("An error occurred during verification.");
+            });
+        }
+    </script>
 </head>
 
 <body> 
@@ -25,12 +56,16 @@
                 <div class="forgot-link">
                     <button type="submit" class="btn">Login</button> 
                 </div>
+                <!-- Admin Login Button with Verification -->
+                <div class="admin-link" style="margin-top: 15px;">
+                    <button class="btn" type="button" onclick="verifyAdmin()">Admin Login</button>
+                </div>
             </form>
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     <ul>
                         {% for category, message in messages %}
-                            <li>{{ message }}</li>
+                            <li class="{{ category }}">{{ message }}</li>
                         {% endfor %}
                     </ul>
                 {% endif %}
