@@ -23,31 +23,29 @@
   <main>
     <div class="container">
       <h1>Request Documents</h1>
-
-      <!-- Form for adding/updating a request -->
       <form id="requestForm">
-        <input type="hidden" id="requestId" />
+        <h2>Requester Information</h2>
         <label for="name">Name:</label>
-        <input type="text" id="name" required />
+        <input type="text" id="name" required>
 
         <label for="address">Address:</label>
-        <input type="text" id="address" required />
+        <input type="text" id="address" required>
 
         <label for="birthdate">Birthdate:</label>
-        <input type="date" id="birthdate" required />
+        <input type="date" id="birthdate" required>
 
         <label for="startLiving">When did you start living here?:</label>
-        <input type="date" id="startLiving" required />
+        <input type="date" id="startLiving" required>
 
         <label for="purpose">Purpose:</label>
-        <input type="text" id="purpose" required />
+        <input type="text" id="purpose" required>
 
         <label for="age">Age:</label>
-        <input type="number" id="age" required />
+        <input type="number" id="age" required>
 
-        <div id="guardianField" style="display: none;">
+        <div id="guardianField" style="display:none;">
           <label for="guardianName">Guardian's Name (if minor):</label>
-          <input type="text" id="guardianName" />
+          <input type="text" id="guardianName">
         </div>
 
         <label for="documentType">Type of Document:</label>
@@ -58,26 +56,9 @@
           <option value="Barangay Clearance">Barangay Clearance</option>
         </select>
 
-        <button type="submit" id="submitButton">Add Request</button>
-
-        <div id="notification" style="display:none; padding:10px; margin-top:10px; border-radius:5px;"></div>
+        <button type="submit" id="submitButton">Submit Request</button>
       </form>
 
-      <!-- Report of last submitted request -->
-      <div id="lastReport" style="margin-top:20px; display:none; border:1px solid #ccc; padding:10px;">
-        <h2>Last Submitted Request</h2>
-        <p><strong>Name:</strong> <span id="repName"></span></p>
-        <p><strong>Address:</strong> <span id="repAddress"></span></p>
-        <p><strong>Birthdate:</strong> <span id="repBirthdate"></span></p>
-        <p><strong>Start Living:</strong> <span id="repStart"></span></p>
-        <p><strong>Purpose:</strong> <span id="repPurpose"></span></p>
-        <p><strong>Age:</strong> <span id="repAge"></span></p>
-        <p><strong>Guardian:</strong> <span id="repGuardian"></span></p>
-        <p><strong>Document Type:</strong> <span id="repDocType"></span></p>
-        <p><strong>Status:</strong> <span id="repStatus"></span></p>
-      </div>
-
-      <!-- Table to display requests -->
       <table>
         <thead>
           <tr>
@@ -93,172 +74,126 @@
             <th>Actions</th>
           </tr>
         </thead>
-        <tbody id="requestTableBody"></tbody>
+        <tbody id="requestTableBody">
+          {% for r in requests %}
+          <tr data-id="{{ r.id }}">
+            <td>{{ r.name }}</td>
+            <td>{{ r.address }}</td>
+            <td>{{ r.birthdate }}</td>
+            <td>{{ r.start_living }}</td>
+            <td>{{ r.purpose }}</td>
+            <td>{{ r.age }}</td>
+            <td>{{ r.guardian_name or 'N/A' }}</td>
+            <td>{{ r.document_type }}</td>
+            <td>{{ r.status or 'Pending' }}</td>
+            <td class="actions">
+              <button onclick="editRequest(this)">Edit</button>
+              <button onclick="deleteRequest(this)">Delete</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
       </table>
     </div>
   </main>
 
-<script>
-  // DOM elements
-  const form = document.getElementById('requestForm');
-  const tableBody = document.getElementById('requestTableBody');
-  const guardianField = document.getElementById('guardianField');
-  const submitButton = document.getElementById('submitButton');
-  const requestIdInput = document.getElementById('requestId');
-  const lastReport = document.getElementById('lastReport');
+  <script>
+    const form = document.getElementById('requestForm');
+    const tbody = document.getElementById('requestTableBody');
+    let editingRow = null;
 
-  // report fields
-  const repName = document.getElementById('repName');
-  const repAddress = document.getElementById('repAddress');
-  const repBirthdate = document.getElementById('repBirthdate');
-  const repStart = document.getElementById('repStart');
-  const repPurpose = document.getElementById('repPurpose');
-  const repAge = document.getElementById('repAge');
-  const repGuardian = document.getElementById('repGuardian');
-  const repDocType = document.getElementById('repDocType');
-  const repStatus = document.getElementById('repStatus');
+    document.getElementById('age').addEventListener('input', function() {
+      document.getElementById('guardianField').style.display = parseInt(this.value, 10) < 18 ? 'block' : 'none';
+    });
 
-  // Load requests on page load
-  document.addEventListener('DOMContentLoaded', fetchRequests);
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const payload = {
+        name: document.getElementById('name').value.trim(),
+        address: document.getElementById('address').value.trim(),
+        birthdate: document.getElementById('birthdate').value,
+        startLiving: document.getElementById('startLiving').value,
+        purpose: document.getElementById('purpose').value.trim(),
+        age: parseInt(document.getElementById('age').value, 10),
+        guardianName: document.getElementById('guardianName').value.trim(),
+        documentType: document.getElementById('documentType').value
+      };
 
-  // Form submission handler
-form.addEventListener('submit', async event => {
-  event.preventDefault();
+      if (editingRow) {
+        const id = editingRow.dataset.id;
+        const res = await fetch(`/api/requests/${id}`, {
+          method: 'PUT',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const cells = editingRow.children;
+          cells[0].innerText = data.name;
+          cells[1].innerText = data.address;
+          cells[2].innerText = data.birthdate;
+          cells[3].innerText = data.start_living;
+          cells[4].innerText = data.purpose;
+          cells[5].innerText = data.age;
+          cells[6].innerText = data.guardian_name || 'N/A';
+          cells[7].innerText = data.document_type;
+          cells[8].innerText = data.status || 'Pending';
+        }
+      } else {
+        const res = await fetch('/api/requests', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const tr = document.createElement('tr');
+          tr.dataset.id = data.id;
+          tr.innerHTML = `
+            <td>${data.name}</td>
+            <td>${data.address}</td>
+            <td>${data.birthdate}</td>
+            <td>${data.start_living}</td>
+            <td>${data.purpose}</td>
+            <td>${data.age}</td>
+            <td>${data.guardian_name || 'N/A'}</td>
+            <td>${data.document_type}</td>
+            <td>${data.status || 'Pending'}</td>
+            <td class="actions">
+              <button onclick="editRequest(this)">Edit</button>
+              <button onclick="deleteRequest(this)">Delete</button>
+            </td>`;
+          tbody.prepend(tr);
+        }
+      }
 
-  const payload = {
-    name:          document.getElementById('name').value.trim(),
-    address:       document.getElementById('address').value.trim(),
-    birthdate:     document.getElementById('birthdate').value,
-    startLiving:   document.getElementById('startLiving').value,
-    purpose:       document.getElementById('purpose').value.trim(),
-    age:           parseInt(document.getElementById('age').value, 10),
-    guardianName:  document.getElementById('guardianName').value.trim(),
-    documentType:  document.getElementById('documentType').value
-  };
+      form.reset();
+      editingRow = null;
+      document.getElementById('submitButton').innerText = 'Submit Request';
+      document.getElementById('guardianField').style.display = 'none';
+    });
 
-  const isEdit = !!requestIdInput.value;
-  const url = isEdit ? `/api/requests/${requestIdInput.value}` : '/api/requests';
-  const method = isEdit ? 'PUT' : 'POST';
+    function editRequest(btn) {
+      editingRow = btn.closest('tr');
+      const cells = editingRow.children;
+      document.getElementById('name').value = cells[0].innerText;
+      document.getElementById('address').value = cells[1].innerText;
+      document.getElementById('birthdate').value = cells[2].innerText;
+      document.getElementById('startLiving').value = cells[3].innerText;
+      document.getElementById('purpose').value = cells[4].innerText;
+      document.getElementById('age').value = cells[5].innerText;
+      document.getElementById('guardianField').style.display = cells[5].innerText < 18 ? 'block' : 'none';
+      document.getElementById('guardianName').value = cells[6].innerText === 'N/A' ? '' : cells[6].innerText;
+      document.getElementById('documentType').value = cells[7].innerText;
+      document.getElementById('submitButton').innerText = 'Update Request';
+    }
 
-  try {
-const res = await fetch(url, {
-  method,
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(payload)
-});
-
-if (!res.ok) {
-  const contentType = res.headers.get('content-type');
-  let errorMessage = `Error ${res.status}`;
-  if (contentType && contentType.includes('application/json')) {
-    const errData = await res.json();
-    errorMessage = errData.message || errorMessage;
-  } else {
-    const text = await res.text();
-    console.error('Non-JSON error:', text);
-  }
-  throw new Error(errorMessage);
-}
-
-const data = await res.json();
-
-    showReport(data);
-    showNotification(`✅ Request ${isEdit ? 'updated' : 'submitted'} successfully!`, true);
-
-    // Reset form and UI
-    form.reset();
-    requestIdInput.value = '';
-    submitButton.textContent = 'Add Request';
-    guardianField.style.display = 'none';
-
-    if (!isEdit) addRow(data);  // Only add new row if not editing
-    else fetchRequests();       // Or reload to reflect updates
-
-  } catch (err) {
-    showNotification(`❌ ${err.message}`, false);
-  }
-});
-
-  // Toggle guardian field
-  document.getElementById('age').addEventListener('input', function() {
-    guardianField.style.display = parseInt(this.value, 10) < 18 ? 'block' : 'none';
-  });
-
-  function showNotification(message, success = true) {
-  const notif = document.getElementById('notification');
-  notif.textContent = message;
-  notif.style.display = 'block';
-  notif.style.backgroundColor = success ? '#d4edda' : '#f8d7da';
-  notif.style.color = success ? '#155724' : '#721c24';
-  notif.style.border = success ? '1px solid #c3e6cb' : '1px solid #f5c6cb';
-
-  setTimeout(() => notif.style.display = 'none', 3000);
-}
-
-  // Fetch and render all requests
-  async function fetchRequests() {
-    tableBody.innerHTML = '';
-    const res = await fetch('/api/requests');
-    const requests = await res.json();
-    requests.forEach(addRow);
-  }
-
-  // Add a row to the table
-  function addRow(r) {
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${r.name}</td>
-      <td>${r.address}</td>
-      <td>${r.birthdate}</td>
-      <td>${r.startLiving}</td>
-      <td>${r.purpose}</td>
-      <td>${r.age}</td>
-      <td>${r.guardianName || 'N/A'}</td>
-      <td>${r.documentType}</td>
-      <td>${r.status || 'Pending'}</td>
-      <td>
-        <button onclick='initEdit(${JSON.stringify(r)})'>Edit</button>
-        <button onclick='deleteRequest(${r.id})'>Delete</button>
-      </td>
-    `;
-    tableBody.appendChild(row);
-  }
-
-  // Show report of last submitted request
-  function showReport(r) {
-    repName.textContent = r.name;
-    repAddress.textContent = r.address;
-    repBirthdate.textContent = r.birthdate;
-    repStart.textContent = r.startLiving;
-    repPurpose.textContent = r.purpose;
-    repAge.textContent = r.age;
-    repGuardian.textContent = r.guardianName || 'N/A';
-    repDocType.textContent = r.documentType;
-    repStatus.textContent = r.status || 'Pending';
-    lastReport.style.display = 'block';
-  }
-
-  // Initialize form for editing
-  function initEdit(r) {
-    requestIdInput.value = r.id;
-    document.getElementById('name').value = r.name;
-    document.getElementById('address').value = r.address;
-    document.getElementById('birthdate').value = r.birthdate;
-    document.getElementById('startLiving').value = r.startLiving;
-    document.getElementById('purpose').value = r.purpose;
-    document.getElementById('age').value = r.age;
-    guardianField.style.display = r.age < 18 ? 'block' : 'none';
-    document.getElementById('guardianName').value = r.guardianName;
-    document.getElementById('documentType').value = r.documentType;
-    submitButton.textContent = 'Update Request';
-  }
-
-  // Delete a request
-  async function deleteRequest(id) {
-    if (!confirm('Are you sure you want to delete this request?')) return;
-    const res = await fetch(`/api/requests/${id}`, { method: 'DELETE' });
-    if (res.ok) fetchRequests();
-  }
-</script>
+    async function deleteRequest(btn) {
+      const row = btn.closest('tr');
+      const id = row.dataset.id;
+      const res = await fetch(`/api/requests/${id}`, { method: 'DELETE' });
+      if (res.ok) row.remove();
+    }
+  </script>
 </body>
 </html>

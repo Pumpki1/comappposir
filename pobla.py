@@ -79,6 +79,22 @@ def admin():
                           complaints=complaints,
                           cache_buster=timestamp)
 
+
+@app.route('/api/requests/<int:req_id>/status', methods=['PUT'])
+def update_request_status(req_id):
+    data = request.json
+    new_status = data.get('status', 'Pending')
+    # perform the update
+    res = supabase.table('document_requests') \
+                  .update({"status": new_status}) \
+                  .eq('id', req_id) \
+                  .execute()
+    if res.error:
+        return jsonify({"error": res.error.message}), 400
+    # return the updated record
+    return jsonify(res.data), 200
+
+
 @app.route('/menu')
 def menu():
     # Check if user is logged in (in a real app, you'd use proper authentication)
@@ -88,9 +104,17 @@ def menu():
     
     return render_template('bmenu.html')  
 
+
 @app.route('/documents')
 def documents():
-    return render_template('documents.html')
+    # Fetch all document requests, newest first
+    res = supabase.table('document_requests') \
+                  .select('*') \
+                  .order('requested_at', desc=True) \
+                  .execute()
+    requests = res.data or []
+    return render_template('documents.html', requests=requests)
+
 
 @app.route('/complaint')
 def complaint():
@@ -151,11 +175,8 @@ def add_request():
 
         return jsonify(res.data[0]), 201
     except Exception as e:
-        print("Server error:", str(e))  # this helps debug in terminal
-        return jsonify({"message": "Internal server error"}), 500
-
-
-
+        print("Server error:", str(e))
+        return jsonify({"message": "Server error"}), 500
 
 @app.route('/api/requests', methods=['GET'])
 def list_requests():
@@ -167,11 +188,8 @@ def list_requests():
         return jsonify({"error": res.error.message}), 500
     return jsonify(res.data or []), 200
 
-
-
 @app.route('/api/requests/<int:req_id>', methods=['PUT'])
 def update_request(req_id):
-    """Update an existing document request."""
     data = request.json
     changes = {
         "name":          data['name'],
@@ -180,9 +198,8 @@ def update_request(req_id):
         "start_living":  data['startLiving'],
         "purpose":       data['purpose'],
         "age":           data['age'],
-        "guardian":      data.get('guardianName'),
+        "guardian_name": data.get('guardianName', ''),
         "document_type": data['documentType'],
-        # you can also allow status changes here if needed
     }
     res = supabase.table('document_requests') \
                   .update(changes) \
@@ -190,11 +207,10 @@ def update_request(req_id):
                   .execute()
     if res.error:
         return jsonify({"error": res.error.message}), 400
-    return jsonify(res.data), 200
+    return jsonify(res.data[0] if res.data else {}), 200
 
 @app.route('/api/requests/<int:req_id>', methods=['DELETE'])
 def delete_request(req_id):
-    """Delete a document request."""
     res = supabase.table('document_requests') \
                   .delete() \
                   .eq('id', req_id) \

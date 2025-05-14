@@ -154,13 +154,12 @@
             const confirmAction = confirm(`Are you sure you want to ${status.toLowerCase()} this request?`);
             if (!confirmAction) return;
             
-            fetch(`/api/requests/${id}`, {
+            fetch(`/api/requests/${id}/status`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ status: status })
             })
+
             .then(response => {
                 if (response.ok) {
                     alert(`Request has been ${status.toLowerCase()}.`);
